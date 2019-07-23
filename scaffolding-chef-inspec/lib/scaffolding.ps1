@@ -24,6 +24,7 @@ function Invoke-DefaultBefore {
     }
 
     if((Select-String -Path "$PLAN_CONTEXT/../inspec.yml" -Pattern "compliance: ")){
+        Write-BuildLine "There is a dependency on an Automate Profile"
         Invoke-ComplianceLogin
     }
 }
@@ -166,17 +167,18 @@ user = '<automate_user>'
 }
 
 function Invoke-ComplianceLogin {
-    if (!$COMPLIANCE_CREDS){
+    if (!$scaffolding_automate_creds_file){
         Write-BuildLine "ERROR: Please preform an 'inspec compliance login' and set"
-        Write-BuildLine " `$HAB_STUDIO_SECRET_COMPLIANCE_CREDS to the contents of"
-        Write-BuildLine " '~/.inspec/compliance/config.json'"
+        Write-BuildLine " `$scaffolding_automate_creds_file to '~/.inspec/compliance/config.json'"
         exit 1
     }
 
-    $creds = Get-Content $COMPLIANCE_CREDS | ConvertFrom-Json
+    $creds = Get-Content $scaffolding_automate_creds_file | ConvertFrom-Json
 
-    inspec compliance login --insecure $creds.insecure `
-                            --user $creds.user `
-                            --token $creds.token `
-                            "$($creds.server)/api/v0/"
+    Write-BuildLine $creds
+
+    inspec compliance login "$($creds.server.Substring(0,$creds.server.Length-7))" `
+                            --insecure `
+                            --user "$($creds.user)" `
+                            --token "$($creds.token)"
 }

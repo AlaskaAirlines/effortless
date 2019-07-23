@@ -7,4 +7,6 @@ $pkg_build_deps=@("stuartpreston/inspec")
 $pkg_deps=@("stuartpreston/inspec")
 $pkg_description="Effortless Windows Audit"
 $pkg_scaffolding="thelunaticscripter/scaffolding-chef-inspec"
-$scaffolding_automate_creds_file = "~/.inspec/compliance/config.json"
+$scaffolding_automate_server_url = "$env:AUTOMATE_SERVER_URL"
+$scaffolding_automate_user = "$env:AUTOMATE_USER"
+$scaffolding_automate_token = "$env:AUTOMATE_TOKEN"

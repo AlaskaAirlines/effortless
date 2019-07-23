@@ -24,8 +24,12 @@ function Invoke-DefaultBefore {
     }
 
     if((Select-String -Path "$PLAN_CONTEXT/../inspec.yml" -Pattern "compliance: ")){
-        Write-BuildLine "There is a dependency on an Automate Profile"
-        Invoke-ComplianceLogin
+        if(!$(Test-Path "~/.inspec/compliance/config.json")){
+            inspec compliance login "$scaffolding_automate_server_url" `
+                            --insecure `
+                            --user "$scaffolding_automate_user" `
+                            --token "$scaffolding_automate_token"
+        }
     }
 }
 
@@ -75,7 +79,7 @@ if(!`$env:CFG_CHEF_LICENSE){
 `$PROFILE_PATH="{{pkg.path}}/{{pkg.name}}-{{pkg.version}}.tar.gz"
 
 function Invoke-Inspec {
-    inspec exec `$PROFILE_PATH --config `$CONFIG --log-level `$CFG_LOG_LEVEL
+    inspec exec `$PROFILE_PATH --json-config `$CONFIG --log-level `$env:CFG_LOG_LEVEL
 }
 
 `$SPLAY_DURATION = Get-Random -InputObject (0..`$env:CFG_SPLAY) -Count 1
@@ -123,9 +127,6 @@ function Invoke-DefaultInstall {
     "reporter": {
         "cli": {
           "stdout": true
-        },
-        "json": {
-          "file": "{{pkg.svc_path}}/logs/inspec_last_run.json"
         }{{#if cfg.automate.enable ~}},
         "automate" : {
           "url": "{{cfg.automate.server_url}}/data-collector/v0/",
@@ -134,14 +135,6 @@ function Invoke-DefaultInstall {
           "verify_ssl": false
         }{{/if ~}}
     }
-    {{#if cfg.automate.enable }},
-    "compliance": {
-      "server" : "{{cfg.automate.server_url}}",
-      "token" : "{{cfg.automate.token}}",
-      "user" : "{{cfg.automate.user}}",
-      "insecure" : true,
-      "ent" : "automate"
-    }{{/if }}
 }
 "@
 
@@ -164,21 +157,4 @@ server_url = 'https://<automate_url>'
 token = '<automate_token>'
 user = '<automate_user>'
 "@
-}
-
-function Invoke-ComplianceLogin {
-    if (!$scaffolding_automate_creds_file){
-        Write-BuildLine "ERROR: Please preform an 'inspec compliance login' and set"
-        Write-BuildLine " `$scaffolding_automate_creds_file to '~/.inspec/compliance/config.json'"
-        exit 1
-    }
-
-    $creds = Get-Content $scaffolding_automate_creds_file | ConvertFrom-Json
-
-    Write-BuildLine $creds
-
-    inspec compliance login "$($creds.server.Substring(0,$creds.server.Length-7))" `
-                            --insecure `
-                            --user "$($creds.user)" `
-                            --token "$($creds.token)"
 }
